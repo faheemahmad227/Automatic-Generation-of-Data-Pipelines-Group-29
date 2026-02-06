@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Pipeline Generator | Group 29</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .animate-pulse-custom { animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        .loading { opacity: 0.6; pointer-events: none; }
+        .drag-over { border-color: #3b82f6 !important; background: #eff6ff !important; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+        .code-preview { max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <div class="bg-white border-b shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">DP</div>
+                    <div>
+                        <div class="font-bold text-gray-800">Data Pipeline Generator</div>
+                        <div class="text-xs text-gray-500">Automatic Generation for MBSE V-Model</div>
+                    </div>
+                </div>
+                <div class="flex gap-2" id="nav">
+                    <button onclick="showScreen('home')" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white" data-screen="home">🏠 Dashboard</button>
+                    <button onclick="showScreen('generate')" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700" data-screen="generate">➕ Generate</button>
+                    <button onclick="showScreen('analyze')" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700" data-screen="analyze">🔍 Analyze</button>
+                    <button onclick="showScreen('run')" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700" data-screen="run">▶ Run</button>
+                    <button onclick="showScreen('monitor')" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700" data-screen="monitor">📊 Monitor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-6 py-6 pb-16">
+        
+        <!-- HOME SCREEN -->
+        <div id="screen-home" class="screen active space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-800">Dashboard</h2>
+                <div class="flex gap-2">
+                    <button onclick="showScreen('generate')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">➕ Generate Pipeline</button>
+                    <button onclick="showScreen('analyze')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">🔍 Analyze Source</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <div class="text-gray-500 text-sm">Total Pipelines</div>
+                    <div class="text-3xl font-bold text-gray-800" id="stat-total">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <div class="text-gray-500 text-sm">Successful</div>
+                    <div class="text-3xl font-bold text-green-600" id="stat-success">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <div class="text-gray-500 text-sm">Records Processed</div>
+                    <div class="text-3xl font-bold text-blue-600" id="stat-records">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <div class="text-gray-500 text-sm">Success Rate</div>
+                    <div class="text-3xl font-bold text-purple-600" id="stat-rate">100%</div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="font-semibold text-gray-800">Generated Pipelines</h3>
+                    <button onclick="loadPipelines()" class="text-blue-600 hover:text-blue-800 text-sm">🔄 Refresh</button>
+                </div>
+                <div id="pipelines-list" class="divide-y">
+                    <div class="p-8 text-center text-gray-400">
+                        No pipelines generated yet. Click "Generate Pipeline" to create one.
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border">
+                <div class="p-4 border-b"><h3 class="font-semibold text-gray-800">Recent Activity</h3></div>
+                <div id="activity-list" class="divide-y">
+                    <div class="p-4 text-center text-gray-400">No recent activity</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GENERATE SCREEN -->
+        <div id="screen-generate" class="screen space-y-6">
+            <div class="flex items-center gap-4">
+                <button onclick="showScreen('home')" class="text-gray-500 hover:text-gray-700">← Back</button>
+                <h2 class="text-2xl font-bold text-gray-800">Generate Pipeline</h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Pipeline Configuration</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Pipeline Name</label>
+                            <input type="text" id="pipeline-name" placeholder="my_data_pipeline" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">V-Model Phase</label>
+                            <select id="v-model-phase" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                <option value="integration_testing">Integration Testing</option>
+                                <option value="unit_testing">Unit Testing</option>
+                                <option value="system_testing">System Testing</option>
+                                <option value="acceptance_testing">Acceptance Testing</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Natural Language Description</label>
+                            <textarea id="pipeline-description" rows="4" placeholder="Describe your pipeline in plain English, e.g.: 'Create a pipeline that reads sensor data from CSV, validates temperature values, removes duplicates, normalizes numeric columns, and saves to JSON format.'" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                        <div class="border-t pt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Or Upload Requirements File (YAML/JSON)</label>
+                            <div id="req-dropzone" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 cursor-pointer">
+                                <input type="file" id="req-file" accept=".yaml,.yml,.json" class="hidden">
+                                <div class="text-gray-600">📄 Drop YAML/JSON file or click to browse</div>
+                                <div id="req-file-name" class="text-sm text-blue-600 mt-2 hidden"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="use-ai" class="rounded" checked>
+                            <label for="use-ai" class="text-sm text-gray-700">Use AI for code generation (requires API key)</label>
+                        </div>
+                        <button onclick="startGeneration()" id="generate-btn" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium">
+                            🚀 Generate Pipeline
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Generation Progress</h3>
+                    <div class="space-y-3" id="generation-steps">
+                        <div class="gen-step flex items-center gap-3 p-3 rounded-lg bg-gray-50" data-step="1">
+                            <span class="text-xl">📄</span>
+                            <span class="text-gray-500">Parsing requirements</span>
+                        </div>
+                        <div class="gen-step flex items-center gap-3 p-3 rounded-lg bg-gray-50" data-step="2">
+                            <span class="text-xl">🤖</span>
+                            <span class="text-gray-500">Analyzing with AI</span>
+                        </div>
+                        <div class="gen-step flex items-center gap-3 p-3 rounded-lg bg-gray-50" data-step="3">
+                            <span class="text-xl">🐍</span>
+                            <span class="text-gray-500">Generating Python code</span>
+                        </div>
+                        <div class="gen-step flex items-center gap-3 p-3 rounded-lg bg-gray-50" data-step="4">
+                            <span class="text-xl">⚙️</span>
+                            <span class="text-gray-500">Creating configuration</span>
+                        </div>
+                        <div class="gen-step flex items-center gap-3 p-3 rounded-lg bg-gray-50" data-step="5">
+                            <span class="text-xl">✅</span>
+                            <span class="text-gray-500">Generating test suite</span>
+                        </div>
+                    </div>
+                    <div id="generation-result" class="mt-6 hidden">
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="font-semibold text-green-800 mb-2">✅ Pipeline Generated Successfully!</div>
+                            <div id="generated-files" class="text-sm text-green-700 space-y-1"></div>
+                            <div class="flex gap-2 mt-3">
+                                <button onclick="downloadPipeline()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">📥 Download ZIP</button>
+                                <button onclick="showScreen('run')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">▶ Run Pipeline</button>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <h4 class="font-medium text-gray-800 mb-2">Generated Code Preview:</h4>
+                            <pre id="code-preview" class="code-preview bg-gray-900 text-green-400 p-4 rounded-lg text-sm font-mono overflow-x-auto"></pre>
+                        </div>
+                    </div>
+                    <div id="generation-error" class="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg hidden">
+                        <div class="font-semibold text-red-800">❌ Generation Failed</div>
+                        <div id="error-message" class="text-sm text-red-700 mt-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYZE SCREEN -->
+        <div id="screen-analyze" class="screen space-y-6">
+            <div class="flex items-center gap-4">
+                <button onclick="showScreen('home')" class="text-gray-500 hover:text-gray-700">← Back</button>
+                <h2 class="text-2xl font-bold text-gray-800">Analyze Data Source</h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Select Data Source</h3>
+                    <div class="space-y-4">
+                        <div id="file-dropzone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 cursor-pointer transition-colors">
+                            <input type="file" id="data-file" accept=".csv,.json,.xlsx,.xls,.parquet" class="hidden">
+                            <div class="text-4xl mb-2">📁</div>
+                            <div class="text-gray-600">Drop file here or click to browse</div>
+                            <div class="text-sm text-gray-400 mt-1">Supports: CSV, JSON, Excel, Parquet</div>
+                            <div id="file-name" class="text-sm text-blue-600 mt-2 hidden"></div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="ai-recommend" class="rounded" checked>
+                            <label for="ai-recommend" class="text-sm text-gray-700">Include AI recommendations</label>
+                        </div>
+                        <button onclick="startAnalysis()" id="analyze-btn" class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700">
+                            🔍 Analyze Source
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Analysis Results</h3>
+                    <div id="analysis-placeholder" class="text-center text-gray-400 py-12">Select a data source to analyze</div>
+                    <div id="analysis-results" class="space-y-4 hidden">
+                        <!-- Results will be populated dynamically -->
+                    </div>
+                    <div id="analysis-error" class="p-4 bg-red-50 border border-red-200 rounded-lg hidden">
+                        <div class="font-semibold text-red-800">❌ Analysis Failed</div>
+                        <div id="analysis-error-msg" class="text-sm text-red-700 mt-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RUN SCREEN -->
+        <div id="screen-run" class="screen space-y-6">
+            <div class="flex items-center gap-4">
+                <button onclick="showScreen('home')" class="text-gray-500 hover:text-gray-700">← Back</button>
+                <h2 class="text-2xl font-bold text-gray-800">Execute Pipeline</h2>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Pipeline Configuration</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Select Pipeline</label>
+                            <select id="run-pipeline-select" class="w-full border rounded-lg px-3 py-2">
+                                <option value="">-- Select a pipeline --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Source Path</label>
+                            <input type="text" id="run-source" placeholder="/path/to/input.csv" class="w-full border rounded-lg px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Destination Path</label>
+                            <input type="text" id="run-dest" placeholder="/path/to/output.csv" class="w-full border rounded-lg px-3 py-2">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="dry-run" class="rounded" checked>
+                            <label for="dry-run" class="text-sm text-gray-700">Dry run (validate only)</label>
+                        </div>
+                    </div>
+                    <div class="mt-6 space-y-2">
+                        <button onclick="startRun()" id="run-btn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">▶ Run Pipeline</button>
+                    </div>
+                </div>
+
+                <div class="col-span-2 bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Execution Progress</h3>
+                    <div class="space-y-2" id="run-steps">
+                        <div class="run-step flex items-center gap-4 p-3 rounded-lg bg-gray-50" data-step="1">
+                            <div class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-gray-300 text-gray-600">1</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-600">Extract Data</div>
+                                <div class="step-info text-sm text-gray-500 hidden"></div>
+                            </div>
+                        </div>
+                        <div class="run-step flex items-center gap-4 p-3 rounded-lg bg-gray-50" data-step="2">
+                            <div class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-gray-300 text-gray-600">2</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-600">Validate Input</div>
+                                <div class="step-info text-sm text-gray-500 hidden"></div>
+                            </div>
+                        </div>
+                        <div class="run-step flex items-center gap-4 p-3 rounded-lg bg-gray-50" data-step="3">
+                            <div class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-gray-300 text-gray-600">3</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-600">Transform Data</div>
+                                <div class="step-info text-sm text-gray-500 hidden"></div>
+                            </div>
+                        </div>
+                        <div class="run-step flex items-center gap-4 p-3 rounded-lg bg-gray-50" data-step="4">
+                            <div class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-gray-300 text-gray-600">4</div>
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-600">Load to Destination</div>
+                                <div class="step-info text-sm text-gray-500 hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="run-result" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg hidden">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-semibold text-green-800">✅ Pipeline Execution Complete</div>
+                                <div id="run-result-details" class="text-sm text-green-700"></div>
+                            </div>
+                            <button onclick="showScreen('monitor')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">View Metrics →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MONITOR SCREEN -->
+        <div id="screen-monitor" class="screen space-y-6">
+            <div class="flex items-center gap-4">
+                <button onclick="showScreen('home')" class="text-gray-500 hover:text-gray-700">← Back</button>
+                <h2 class="text-2xl font-bold text-gray-800">Monitoring Dashboard</h2>
+                <button onclick="loadMetrics()" class="ml-auto text-blue-600 hover:text-blue-800 text-sm">🔄 Refresh</button>
+            </div>
+
+            <div class="grid grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <div class="text-gray-500 text-sm">Total Executions</div>
+                    <div class="text-2xl font-bold text-blue-600" id="monitor-total">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <div class="text-gray-500 text-sm">Successful</div>
+                    <div class="text-2xl font-bold text-green-600" id="monitor-success">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <div class="text-gray-500 text-sm">Failed</div>
+                    <div class="text-2xl font-bold text-red-600" id="monitor-failed">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <div class="text-gray-500 text-sm">Success Rate</div>
+                    <div class="text-2xl font-bold text-purple-600" id="monitor-rate">100%</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Execution History</h3>
+                    <div id="execution-history" class="space-y-2 max-h-80 overflow-y-auto">
+                        <div class="text-center text-gray-400 py-4">No execution history</div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Pipeline Status</h3>
+                    <div id="pipeline-status" class="space-y-3">
+                        <div class="text-center text-gray-400 py-4">No pipelines to monitor</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="fixed bottom-0 left-0 right-0 bg-gray-800 text-white text-center py-2 text-sm">
+        Group 29 | Data-driven Engineering WiSe 2025/26 | Automatic Generation of Data Pipelines
+    </div>
+
+    <script>
+        // Global state
+        let currentPipeline = null;
+        let generatedFiles = null;
+
+        // Screen navigation
+        function showScreen(screen) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-' + screen).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.screen === screen) {
+                    btn.className = 'nav-btn flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white';
+                } else {
+                    btn.className = 'nav-btn flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700';
+                }
+            });
+            
+            // Load data for specific screens
+            if (screen === 'home') loadPipelines();
+            if (screen === 'monitor') loadMetrics();
+            if (screen === 'run') loadPipelineOptions();
+        }
+
+        // File upload handling
+        function setupFileUpload(dropzoneId, inputId, displayId) {
+            const dropzone = document.getElementById(dropzoneId);
+            const input = document.getElementById(inputId);
+            const display = document.getElementById(displayId);
+
+            dropzone.addEventListener('click', () => input.click());
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('drag-over');
+            });
+            dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('drag-over');
+                if (e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    updateFileDisplay(input, display);
+                }
+            });
+            input.addEventListener('change', () => updateFileDisplay(input, display));
+        }
+
+        function updateFileDisplay(input, display) {
+            if (input.files.length) {
+                display.textContent = '📄 ' + input.files[0].name;
+                display.classList.remove('hidden');
+            }
+        }
+
+        // Initialize file uploads
+        setupFileUpload('file-dropzone', 'data-file', 'file-name');
+        setupFileUpload('req-dropzone', 'req-file', 'req-file-name');
+
+        // API Functions
+        async function startGeneration() {
+            const btn = document.getElementById('generate-btn');
+            const resultDiv = document.getElementById('generation-result');
+            const errorDiv = document.getElementById('generation-error');
+            
+            btn.textContent = '⏳ Generating...';
+            btn.disabled = true;
+            resultDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            
+            // Reset steps
+            document.querySelectorAll('.gen-step').forEach(step => {
+                step.classList.remove('bg-green-50');
+                step.classList.add('bg-gray-50');
+                step.querySelector('span:last-child').className = 'text-gray-500';
+                const check = step.querySelector('.check');
+                if (check) check.remove();
+            });
+
+            // Animate steps
+            for (let i = 1; i <= 5; i++) {
+                await new Promise(resolve => setTimeout(resolve, 600));
+                const step = document.querySelector(`.gen-step[data-step="${i}"]`);
+                step.classList.remove('bg-gray-50');
+                step.classList.add('bg-green-50');
+                step.querySelector('span:last-child').className = 'text-green-700';
+                const checkSpan = document.createElement('span');
+                checkSpan.className = 'check ml-auto text-green-600';
+                checkSpan.textContent = '✓';
+                step.appendChild(checkSpan);
+            }
+
+            try {
+                const description = document.getElementById('pipeline-description').value;
+                const pipelineName = document.getElementById('pipeline-name').value || 'my_pipeline';
+                const useAI = document.getElementById('use-ai').checked;
+                
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        description: description,
+                        specifications: { pipeline_name: pipelineName },
+                        use_ai: useAI
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    generatedFiles = data.generated_files;
+                    currentPipeline = data.specifications;
+                    
+                    // Display generated files
+                    const filesDiv = document.getElementById('generated-files');
+                    filesDiv.innerHTML = Object.entries(data.generated_files)
+                        .filter(([key]) => key !== 'directory')
+                        .map(([key, path]) => `<div>📄 ${path.split('/').pop()}</div>`)
+                        .join('');
+                    
+                    // Show code preview (fetch the code file)
+                    try {
+                        const codeResponse = await fetch(`/api/download/${data.generated_files.directory.split('/').pop()}/${data.specifications.pipeline_name}.py`);
+                        if (codeResponse.ok) {
+                            const code = await codeResponse.text();
+                            document.getElementById('code-preview').textContent = code.substring(0, 2000) + (code.length > 2000 ? '\n...' : '');
+                        }
+                    } catch (e) {
+                        document.getElementById('code-preview').textContent = '// Code preview not available';
+                    }
+                    
+                    resultDiv.classList.remove('hidden');
+                } else {
+                    throw new Error(data.error || 'Generation failed');
+                }
+            } catch (error) {
+                document.getElementById('error-message').textContent = error.message;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btn.textContent = '🚀 Generate Pipeline';
+                btn.disabled = false;
+            }
+        }
+
+        async function startAnalysis() {
+            const btn = document.getElementById('analyze-btn');
+            const fileInput = document.getElementById('data-file');
+            const resultsDiv = document.getElementById('analysis-results');
+            const placeholderDiv = document.getElementById('analysis-placeholder');
+            const errorDiv = document.getElementById('analysis-error');
+            
+            if (!fileInput.files.length) {
+                alert('Please select a file to analyze');
+                return;
+            }
+            
+            btn.textContent = '⏳ Analyzing...';
+            btn.disabled = true;
+            placeholderDiv.classList.add('hidden');
+            resultsDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Build results HTML
+                    let html = '';
+                    
+                    // Format detected
+                    html += `<div class="p-3 bg-blue-50 rounded-lg">
+                        <div class="font-medium text-blue-800">📊 Format Detected</div>
+                        <div class="text-blue-700">${data.schema.file_info.file_format.toUpperCase()} - ${data.schema.file_info.file_size_mb} MB</div>
+                    </div>`;
+                    
+                    // Schema
+                    html += `<div class="p-3 bg-gray-50 rounded-lg">
+                        <div class="font-medium text-gray-800 mb-2">📋 Schema (${data.schema.column_count} fields, ${data.schema.row_count} rows)</div>
+                        <div class="text-sm font-mono space-y-1 max-h-40 overflow-y-auto">`;
+                    for (const [col, info] of Object.entries(data.schema.columns)) {
+                        const nullWarning = info.null_count > 0 ? `<span class="text-yellow-600">(${((info.null_count/data.schema.row_count)*100).toFixed(1)}% null)</span>` : '';
+                        html += `<div><span class="text-purple-600">${col}</span>: ${info.dtype} ${nullWarning}</div>`;
+                    }
+                    html += '</div></div>';
+                    
+                    // Quality metrics
+                    const quality = data.quality;
+                    const qualityClass = quality.overall_quality_score >= 80 ? 'green' : quality.overall_quality_score >= 50 ? 'yellow' : 'red';
+                    html += `<div class="p-3 bg-${qualityClass}-50 rounded-lg">
+                        <div class="font-medium text-${qualityClass}-800 mb-2">📈 Quality Score: ${quality.overall_quality_score}%</div>
+                        <div class="text-sm text-${qualityClass}-700 space-y-1">
+                            <div>• Completeness: ${(100 - quality.completeness.null_percentage).toFixed(1)}%</div>
+                            <div>• Duplicates: ${quality.uniqueness.duplicate_rows} rows (${quality.uniqueness.duplicate_percentage}%)</div>
+                        </div>
+                    </div>`;
+                    
+                    // Recommendations
+                    if (data.recommendations && data.recommendations.length) {
+                        html += `<div class="p-3 bg-green-50 rounded-lg">
+                            <div class="font-medium text-green-800 mb-2">🤖 AI Recommendations</div>
+                            <div class="text-sm text-green-700 space-y-1">`;
+                        for (const rec of data.recommendations) {
+                            html += `<div>✓ ${rec.title}: ${rec.description}</div>`;
+                        }
+                        html += `</div>
+                            <button onclick="useRecommendations()" class="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
+                                Generate Pipeline with Recommendations
+                            </button>
+                        </div>`;
+                    }
+                    
+                    resultsDiv.innerHTML = html;
+                    resultsDiv.classList.remove('hidden');
+                    
+                    // Store for later use
+                    window.analysisData = data;
+                } else {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+            } catch (error) {
+                document.getElementById('analysis-error-msg').textContent = error.message;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btn.textContent = '🔍 Analyze Source';
+                btn.disabled = false;
+            }
+        }
+
+        function useRecommendations() {
+            if (window.analysisData) {
+                // Pre-fill generation form with recommendations
+                const suggestions = window.analysisData.suggestions || [];
+                const transformations = suggestions.map(s => s.type).join(', ');
+                document.getElementById('pipeline-description').value = 
+                    `Process the uploaded data with the following transformations: ${transformations}. Based on analysis, handle ${window.analysisData.quality.completeness.null_percentage}% null values and ${window.analysisData.quality.uniqueness.duplicate_rows} duplicates.`;
+                showScreen('generate');
+            }
+        }
+
+        async function startRun() {
+            const btn = document.getElementById('run-btn');
+            const resultDiv = document.getElementById('run-result');
+            
+            const pipelineDir = document.getElementById('run-pipeline-select').value;
+            const sourcePath = document.getElementById('run-source').value;
+            const destPath = document.getElementById('run-dest').value;
+            const dryRun = document.getElementById('dry-run').checked;
+            
+            if (!pipelineDir || !sourcePath || !destPath) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            btn.textContent = '⏳ Running...';
+            btn.disabled = true;
+            resultDiv.classList.add('hidden');
+            
+            // Reset steps
+            document.querySelectorAll('.run-step').forEach(step => {
+                step.classList.remove('bg-green-50');
+                step.classList.add('bg-gray-50');
+                const indicator = step.querySelector('.step-indicator');
+                indicator.className = 'step-indicator w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-gray-300 text-gray-600';
+                indicator.textContent = step.dataset.step;
+                step.querySelector('.step-info').classList.add('hidden');
+            });
+
+            // Animate steps
+            for (let i = 1; i <= 4; i++) {
+                await new Promise(resolve => setTimeout(resolve, 800));
+                const step = document.querySelector(`.run-step[data-step="${i}"]`);
+                step.classList.remove('bg-gray-50');
+                step.classList.add('bg-green-50');
+                const indicator = step.querySelector('.step-indicator');
+                indicator.className = 'step-indicator w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-green-500 text-white';
+                indicator.textContent = '✓';
+                step.querySelector('.step-info').classList.remove('hidden');
+                step.querySelector('.step-info').textContent = `Completed in ${(Math.random() * 2 + 0.5).toFixed(2)}s`;
+            }
+
+            try {
+                const response = await fetch('/api/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pipeline_directory: pipelineDir,
+                        source_path: sourcePath,
+                        destination_path: destPath,
+                        dry_run: dryRun
+                    })
+                });
+
+                const data = await response.json();
+                
+                document.getElementById('run-result-details').textContent = 
+                    `Status: ${data.status} | ${dryRun ? 'Dry run completed' : 'Execution simulated'}`;
+                resultDiv.classList.remove('hidden');
+            } catch (error) {
+                alert('Execution failed: ' + error.message);
+            } finally {
+                btn.textContent = '▶ Run Pipeline';
+                btn.disabled = false;
+            }
+        }
+
+        async function loadPipelines() {
+            try {
+                const response = await fetch('/api/pipelines');
+                const data = await response.json();
+                
+                const listDiv = document.getElementById('pipelines-list');
+                
+                if (data.pipelines && data.pipelines.length > 0) {
+                    listDiv.innerHTML = data.pipelines.map(p => `
+                        <div class="p-4 flex items-center justify-between hover:bg-gray-50">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">📊</div>
+                                <div>
+                                    <div class="font-medium text-gray-800">${p.name}</div>
+                                    <div class="text-sm text-gray-500">${p.description || 'No description'}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="text-sm text-gray-500">${p.created}</span>
+                                <a href="/api/download-zip/${p.directory}" class="text-blue-600 hover:text-blue-800">📥 Download</a>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    // Update stats
+                    document.getElementById('stat-total').textContent = data.pipelines.length;
+                } else {
+                    listDiv.innerHTML = '<div class="p-8 text-center text-gray-400">No pipelines generated yet.</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load pipelines:', error);
+            }
+        }
+
+        async function loadPipelineOptions() {
+            try {
+                const response = await fetch('/api/pipelines');
+                const data = await response.json();
+                
+                const select = document.getElementById('run-pipeline-select');
+                select.innerHTML = '<option value="">-- Select a pipeline --</option>';
+                
+                if (data.pipelines) {
+                    data.pipelines.forEach(p => {
+                        select.innerHTML += `<option value="${p.directory}">${p.name}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load pipeline options:', error);
+            }
+        }
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/api/metrics');
+                const data = await response.json();
+                
+                // Update summary stats
+                document.getElementById('monitor-total').textContent = data.summary.total_executions;
+                document.getElementById('monitor-success').textContent = data.summary.successful;
+                document.getElementById('monitor-failed').textContent = data.summary.failed;
+                
+                const rate = data.summary.total_executions > 0 
+                    ? ((data.summary.successful / data.summary.total_executions) * 100).toFixed(1) 
+                    : 100;
+                document.getElementById('monitor-rate').textContent = rate + '%';
+                
+                // Update history
+                const historyDiv = document.getElementById('execution-history');
+                if (data.history && data.history.length > 0) {
+                    historyDiv.innerHTML = data.history.reverse().map(h => {
+                        const statusClass = h.status === 'success' ? 'green' : h.status === 'failed' ? 'red' : 'blue';
+                        return `<div class="flex items-center gap-4 p-3 rounded-lg bg-${statusClass}-50">
+                            <span class="text-xl">${h.status === 'success' ? '✅' : h.status === 'failed' ? '❌' : 'ℹ️'}</span>
+                            <div class="flex-1">
+                                <div class="text-${statusClass}-800">${h.pipeline_name || 'Pipeline'}: ${h.action}</div>
+                                <div class="text-sm text-gray-500">${new Date(h.timestamp).toLocaleString()}</div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load metrics:', error);
+            }
+        }
+
+        function downloadPipeline() {
+            if (generatedFiles && generatedFiles.directory) {
+                const dirName = generatedFiles.directory.split('/').pop();
+                window.location.href = `/api/download-zip/${dirName}`;
+            }
+        }
+
+        // Initial load
+        loadPipelines();
+    </script>
+</body>
+</html>

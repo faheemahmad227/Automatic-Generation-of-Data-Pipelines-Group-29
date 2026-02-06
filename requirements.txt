@@ -1,0 +1,32 @@
+# Data Pipeline Generator - Requirements
+# Group 29 - DDE Project WiSe 2025/26
+
+# Web Framework
+flask>=3.0.0
+werkzeug>=3.0.0
+
+# Data Processing
+pandas>=2.0.0
+openpyxl>=3.1.0
+pyarrow>=14.0.0
+
+# AI Integration (OpenAI-compatible API)
+openai>=1.0.0
+
+# Template Engine
+jinja2>=3.1.0
+
+# Configuration
+pyyaml>=6.0.0
+python-dotenv>=1.0.0
+
+# Logging
+structlog>=23.1.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Code Quality
+black>=23.0.0
+flake8>=6.0.0
