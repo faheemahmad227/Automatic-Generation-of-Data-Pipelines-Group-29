@@ -1,5 +1,5 @@
 """
-Source Analyzer Module - Analyzes data sources to detect schema, types, and quality metrics.
+Analyzes data sources to detect schema, types, and quality metrics.
 """
 import pandas as pd
 import numpy as np
@@ -56,15 +56,6 @@ class SourceAnalyzer:
         logger.info("Source Analyzer initialized")
     
     def detect_format(self, file_path: str) -> str:
-        """
-        Detect the format of a data file based on extension.
-        
-        Args:
-            file_path: Path to the data file
-            
-        Returns:
-            Detected format string
-        """
         path = Path(file_path)
         ext = path.suffix.lower()
         
@@ -74,16 +65,6 @@ class SourceAnalyzer:
         return detected
     
     def load_data(self, file_path: str, sample_size: int = None) -> pd.DataFrame:
-        """
-        Load data from file into a DataFrame.
-        
-        Args:
-            file_path: Path to the data file
-            sample_size: Optional number of rows to sample
-            
-        Returns:
-            Loaded DataFrame
-        """
         file_format = self.detect_format(file_path)
         
         try:
@@ -114,15 +95,6 @@ class SourceAnalyzer:
             raise ValueError(f"Could not load file: {str(e)}")
     
     def infer_schema(self, df: pd.DataFrame = None) -> Dict[str, Any]:
-        """
-        Infer schema information from a DataFrame.
-        
-        Args:
-            df: Optional DataFrame (uses current_df if not provided)
-            
-        Returns:
-            Dictionary containing schema information
-        """
         if df is None:
             df = self.current_df
         
@@ -173,15 +145,6 @@ class SourceAnalyzer:
         return schema
     
     def calculate_quality_metrics(self, df: pd.DataFrame = None) -> Dict[str, Any]:
-        """
-        Calculate data quality metrics.
-        
-        Args:
-            df: Optional DataFrame (uses current_df if not provided)
-            
-        Returns:
-            Dictionary containing quality metrics
-        """
         if df is None:
             df = self.current_df
         
@@ -238,15 +201,6 @@ class SourceAnalyzer:
         return metrics
     
     def analyze(self, file_path: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        """
-        Perform complete analysis of a data source.
-        
-        Args:
-            file_path: Path to the data file
-            
-        Returns:
-            Tuple of (schema_info, quality_metrics)
-        """
         logger.info("Starting source analysis", file=file_path)
         
         # Load data
@@ -273,16 +227,6 @@ class SourceAnalyzer:
         return schema, quality
     
     def get_preview(self, file_path: str = None, rows: int = 10) -> Dict[str, Any]:
-        """
-        Get a preview of the data.
-        
-        Args:
-            file_path: Optional path (uses current data if not provided)
-            rows: Number of rows to preview
-            
-        Returns:
-            Dictionary with preview data
-        """
         if file_path:
             df = self.load_data(file_path, sample_size=rows)
         else:
@@ -308,16 +252,6 @@ class SourceAnalyzer:
         }
     
     def suggest_transformations(self, schema: Dict, quality: Dict) -> list:
-        """
-        Suggest transformations based on schema and quality analysis.
-        
-        Args:
-            schema: Schema information
-            quality: Quality metrics
-            
-        Returns:
-            List of suggested transformations
-        """
         suggestions = []
         
         # Check for null values
@@ -371,15 +305,6 @@ class SourceAnalyzer:
 
 # Convenience function for quick analysis
 def analyze_file(file_path: str) -> Dict[str, Any]:
-    """
-    Quick analysis of a data file.
-    
-    Args:
-        file_path: Path to the data file
-        
-    Returns:
-        Complete analysis results
-    """
     analyzer = SourceAnalyzer()
     schema, quality = analyzer.analyze(file_path)
     suggestions = analyzer.suggest_transformations(schema, quality)

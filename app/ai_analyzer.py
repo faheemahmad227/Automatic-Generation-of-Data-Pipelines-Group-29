@@ -11,20 +11,11 @@ import structlog
 
 logger = structlog.get_logger()
 
-# ============================================================================
-# 🔑 API CONFIGURATION - UPDATE THESE VALUES WITH YOUR CREDENTIALS
-# ============================================================================
-
 # Uni Paderborn AI Gateway Configuration
-API_KEY = "YOUR_API_KEY_HERE"  # <-- PUT YOUR API KEY HERE
-BASE_URL = "https://ai-gateway.2.2021.2.2.2.2.2.2/v1"  # <-- UPDATE IF NEEDED
+API_KEY = "sk-JajdqtLcvjAF7QPVavcRAw"  # <-- PUT YOUR API KEY HERE
+BASE_URL = "https://ai-gateway.uni-paderborn.de/v1/"  # <-- UPDATE IF NEEDED
 
-# Model name (gpt-4o-mini works well for this application)
-MODEL_NAME = "gpt-4o-mini"
-
-# ============================================================================
-# After updating API_KEY above, save the file and run: python main.py
-# ============================================================================
+MODEL_NAME = "gwdg.deepseek-r1"
 
 
 class AIAnalyzer:
@@ -47,16 +38,6 @@ class AIAnalyzer:
             logger.info("AI Analyzer initialized", base_url=self.base_url)
     
     def analyze_requirements(self, user_description: str, schema_info: Dict = None) -> Dict[str, Any]:
-        """
-        Analyze user's natural language description and extract pipeline requirements.
-        
-        Args:
-            user_description: Natural language description of the pipeline
-            schema_info: Optional schema information from source analysis
-            
-        Returns:
-            Dictionary containing extracted pipeline specifications
-        """
         if not self.client:
             return self._fallback_analysis(user_description)
         

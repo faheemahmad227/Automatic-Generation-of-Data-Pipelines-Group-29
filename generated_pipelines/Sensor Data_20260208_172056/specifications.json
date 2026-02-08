@@ -1,0 +1,43 @@
+{
+  "pipeline_name": "Sensor Data",
+  "description": "Process the uploaded data with the following transformations: deduplicate, normalize, filter. Based on analysis, handle 1.25% null values and 1 duplicates.",
+  "source": {
+    "type": "file",
+    "format": "csv",
+    "path_or_connection": "input_data"
+  },
+  "transformations": [
+    {
+      "type": "validate",
+      "description": "Handle missing values",
+      "config": {}
+    },
+    {
+      "type": "filter",
+      "description": "Filter data based on conditions",
+      "config": {}
+    },
+    {
+      "type": "normalize",
+      "description": "Normalize data values",
+      "config": {}
+    },
+    {
+      "type": "deduplicate",
+      "description": "Remove duplicates",
+      "config": {}
+    }
+  ],
+  "destination": {
+    "type": "file",
+    "format": "csv",
+    "path_or_connection": "output_data.csv"
+  },
+  "validation_rules": [],
+  "schedule": "once",
+  "error_handling": {
+    "on_failure": "retry",
+    "max_retries": 3,
+    "notification": true
+  }
+}

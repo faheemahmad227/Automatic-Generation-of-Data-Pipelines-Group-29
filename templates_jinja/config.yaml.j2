@@ -1,0 +1,44 @@
+# Pipeline Configuration: {{ pipeline_name }}
+# Generated: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}
+
+pipeline:
+  name: "{{ pipeline_name }}"
+  description: "{{ description | default('Data processing pipeline') }}"
+  version: "1.0.0"
+
+source:
+  type: "{{ source.type | default('file') }}"
+  format: "{{ source.format | default('csv') }}"
+  path: "{{ source.path_or_connection | default('input_data') }}"
+
+destination:
+  type: "{{ destination.type | default('file') }}"
+  format: "{{ destination.format | default('csv') }}"
+  path: "{{ destination.path_or_connection | default('output_data') }}"
+
+transformations:
+{% for transform in transformations %}
+  - type: "{{ transform.type }}"
+    description: "{{ transform.description }}"
+    enabled: true
+{% endfor %}
+
+validation:
+{% for rule in validation_rules %}
+  - field: "{{ rule.field }}"
+    rule: "{{ rule.rule }}"
+{% endfor %}
+
+error_handling:
+  on_failure: "{{ error_handling.on_failure | default('retry') }}"
+  max_retries: {{ error_handling.max_retries | default(3) }}
+  notification: {{ error_handling.notification | default(true) | lower }}
+
+execution:
+  schedule: "{{ schedule | default('once') }}"
+  timeout_seconds: 3600
+  enable_monitoring: true
+
+logging:
+  level: "INFO"
+  format: "json"

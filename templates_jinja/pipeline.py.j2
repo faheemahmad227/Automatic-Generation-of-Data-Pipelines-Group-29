@@ -1,0 +1,327 @@
+"""
+Auto-generated Data Pipeline: {{ pipeline_name }}
+Description: {{ description | default('Data processing pipeline') }}
+Generated: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}
+Generator: Automatic Data Pipeline Generator - Group 29
+"""
+
+import pandas as pd
+import hashlib
+import json
+import structlog
+from pathlib import Path
+from datetime import datetime
+from typing import Optional, Dict, Any, List
+
+# Configure structured logging
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer()
+    ],
+    wrapper_class=structlog.stdlib.BoundLogger,
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+)
+
+logger = structlog.get_logger()
+
+
+class {{ pipeline_name | title | replace('_', '') }}Pipeline:
+    """
+    Data pipeline for {{ description | default('processing data') }}.
+    
+    Features:
+    - Idempotent execution with hash-based change detection
+    - Comprehensive error handling and retry logic
+    - Structured logging for observability
+    - Input validation and quality checks
+    """
+    
+    def __init__(self, config_path: str = None):
+        """Initialize the pipeline with optional configuration."""
+        self.config = self._load_config(config_path) if config_path else {}
+        self.state_file = Path("{{ pipeline_name }}_state.json")
+        self.metrics = {
+            "records_input": 0,
+            "records_output": 0,
+            "records_failed": 0,
+            "start_time": None,
+            "end_time": None,
+            "duration_seconds": 0
+        }
+        logger.info("Pipeline initialized", pipeline="{{ pipeline_name }}")
+    
+    def _load_config(self, config_path: str) -> Dict:
+        """Load configuration from YAML file."""
+        import yaml
+        with open(config_path) as f:
+            return yaml.safe_load(f)
+    
+    def _compute_hash(self, data: pd.DataFrame) -> str:
+        """Compute hash for idempotency checking."""
+        return hashlib.md5(
+            pd.util.hash_pandas_object(data).values.tobytes()
+        ).hexdigest()
+    
+    def _load_state(self) -> Dict:
+        """Load pipeline state for idempotent execution."""
+        if self.state_file.exists():
+            with open(self.state_file) as f:
+                return json.load(f)
+        return {"last_hash": None, "last_run": None, "run_count": 0}
+    
+    def _save_state(self, data_hash: str):
+        """Save pipeline state after successful execution."""
+        state = self._load_state()
+        state.update({
+            "last_hash": data_hash,
+            "last_run": datetime.now().isoformat(),
+            "run_count": state.get("run_count", 0) + 1
+        })
+        with open(self.state_file, 'w') as f:
+            json.dump(state, f, indent=2)
+    
+    def validate_input(self, df: pd.DataFrame) -> List[str]:
+        """
+        Validate input data against defined rules.
+        
+        Returns:
+            List of validation error messages (empty if valid)
+        """
+        errors = []
+        
+        {% if validation_rules %}
+        {% for rule in validation_rules %}
+        # Validation: {{ rule.rule }} for {{ rule.field }}
+        {% if rule.rule == 'not_null' %}
+        if '{{ rule.field }}' in df.columns and df['{{ rule.field }}'].isnull().any():
+            errors.append("Column '{{ rule.field }}' contains null values")
+        {% elif rule.rule == 'unique' %}
+        if '{{ rule.field }}' in df.columns and df['{{ rule.field }}'].duplicated().any():
+            errors.append("Column '{{ rule.field }}' contains duplicate values")
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+        
+        return errors
+    
+    def extract(self, source_path: str) -> pd.DataFrame:
+        """
+        Extract data from source.
+        
+        Args:
+            source_path: Path to source data
+            
+        Returns:
+            Extracted DataFrame
+        """
+        logger.info("Extracting data", source=source_path)
+        
+        try:
+            {% if source.format == 'csv' %}
+            df = pd.read_csv(source_path)
+            {% elif source.format == 'json' %}
+            df = pd.read_json(source_path)
+            {% elif source.format in ['excel', 'xlsx', 'xls'] %}
+            df = pd.read_excel(source_path)
+            {% elif source.format == 'parquet' %}
+            df = pd.read_parquet(source_path)
+            {% else %}
+            df = pd.read_csv(source_path)
+            {% endif %}
+            
+            self.metrics["records_input"] = len(df)
+            logger.info("Extraction complete", rows=len(df), columns=len(df.columns))
+            return df
+            
+        except Exception as e:
+            logger.error("Extraction failed", error=str(e))
+            raise
+    
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Apply transformations to the data.
+        
+        Args:
+            df: Input DataFrame
+            
+        Returns:
+            Transformed DataFrame
+        """
+        logger.info("Starting transformations", input_rows=len(df))
+        
+        try:
+            {% for transform in transformations %}
+            # Transformation: {{ transform.type }} - {{ transform.description }}
+            logger.info("Applying transformation", type="{{ transform.type }}")
+            {% if transform.type == 'validate' %}
+            # Handle missing values
+            df = df.dropna(how='all')
+            for col in df.select_dtypes(include=['number']).columns:
+                df[col] = df[col].fillna(df[col].median())
+            for col in df.select_dtypes(include=['object']).columns:
+                df[col] = df[col].fillna('UNKNOWN')
+            {% elif transform.type == 'deduplicate' %}
+            # Remove duplicates
+            initial = len(df)
+            df = df.drop_duplicates()
+            logger.info("Deduplication", removed=initial - len(df))
+            {% elif transform.type == 'normalize' %}
+            # Normalize numeric columns
+            for col in df.select_dtypes(include=['number']).columns:
+                min_val, max_val = df[col].min(), df[col].max()
+                if max_val > min_val:
+                    df[col] = (df[col] - min_val) / (max_val - min_val)
+            {% elif transform.type == 'filter' %}
+            # Apply filtering
+            # TODO: Customize filter conditions as needed
+            pass
+            {% elif transform.type == 'aggregate' %}
+            # Apply aggregation
+            # TODO: Customize groupby and aggregation as needed
+            pass
+            {% elif transform.type == 'map' %}
+            # Apply mapping transformations
+            pass
+            {% elif transform.type == 'enrich' %}
+            # Enrich data with additional information
+            pass
+            {% else %}
+            # Custom transformation
+            pass
+            {% endif %}
+            
+            {% endfor %}
+            
+            logger.info("Transformations complete", output_rows=len(df))
+            return df
+            
+        except Exception as e:
+            logger.error("Transformation failed", error=str(e))
+            raise
+    
+    def load(self, df: pd.DataFrame, destination_path: str):
+        """
+        Load data to destination.
+        
+        Args:
+            df: DataFrame to save
+            destination_path: Output path
+        """
+        logger.info("Loading data", destination=destination_path)
+        
+        try:
+            {% if destination.format == 'csv' %}
+            df.to_csv(destination_path, index=False)
+            {% elif destination.format == 'json' %}
+            df.to_json(destination_path, orient='records', indent=2)
+            {% elif destination.format == 'parquet' %}
+            df.to_parquet(destination_path, index=False)
+            {% elif destination.format in ['excel', 'xlsx'] %}
+            df.to_excel(destination_path, index=False)
+            {% else %}
+            df.to_csv(destination_path, index=False)
+            {% endif %}
+            
+            self.metrics["records_output"] = len(df)
+            logger.info("Load complete", rows=len(df))
+            
+        except Exception as e:
+            logger.error("Load failed", error=str(e))
+            raise
+    
+    def run(self, source_path: str, destination_path: str, 
+            force: bool = False, dry_run: bool = False) -> Dict[str, Any]:
+        """
+        Execute the complete ETL pipeline.
+        
+        Args:
+            source_path: Path to source data
+            destination_path: Path for output
+            force: Force execution even if data unchanged
+            dry_run: Validate without actual execution
+            
+        Returns:
+            Execution metrics dictionary
+        """
+        self.metrics["start_time"] = datetime.now().isoformat()
+        logger.info("Pipeline execution started",
+                   source=source_path,
+                   destination=destination_path,
+                   dry_run=dry_run)
+        
+        try:
+            # Extract
+            df = self.extract(source_path)
+            
+            # Validate input
+            validation_errors = self.validate_input(df)
+            if validation_errors:
+                logger.warning("Validation issues found", errors=validation_errors)
+                # should we fail here? leaving as warning for now
+            
+            # Check idempotency
+            data_hash = self._compute_hash(df)
+            state = self._load_state()
+            
+            if not force and state["last_hash"] == data_hash:
+                logger.info("Data unchanged, skipping")
+                return {"status": "skipped", "reason": "data_unchanged"}
+            
+            if dry_run:
+                logger.info("Dry run complete - no changes made")
+                return {"status": "dry_run", "would_process": len(df)}
+            
+            # Transform
+            df = self.transform(df)
+            
+            # Load
+            self.load(df, destination_path)
+            
+            # Save state
+            self._save_state(data_hash)
+            
+            # Finalize metrics
+            end_time = datetime.now()
+            self.metrics["end_time"] = end_time.isoformat()
+            start = datetime.fromisoformat(self.metrics["start_time"])
+            self.metrics["duration_seconds"] = (end_time - start).total_seconds()
+            self.metrics["status"] = "success"
+            
+            logger.info("Pipeline complete", metrics=self.metrics)
+            return self.metrics
+            
+        except Exception as e:
+            self.metrics["end_time"] = datetime.now().isoformat()
+            self.metrics["status"] = "failed"
+            self.metrics["error"] = str(e)
+            logger.error("Pipeline failed", error=str(e))
+            raise
+
+
+def main():
+    """Main entry point."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="{{ pipeline_name }} Pipeline")
+    parser.add_argument("--source", "-s", required=True, help="Source data path")
+    parser.add_argument("--destination", "-d", required=True, help="Destination path")
+    parser.add_argument("--config", "-c", help="Configuration file path")
+    parser.add_argument("--force", "-f", action="store_true", help="Force execution")
+    parser.add_argument("--dry-run", action="store_true", help="Validate without executing")
+    
+    args = parser.parse_args()
+    
+    pipeline = {{ pipeline_name | title | replace('_', '') }}Pipeline(args.config)
+    result = pipeline.run(args.source, args.destination, args.force, args.dry_run)
+    
+    print(json.dumps(result, indent=2))
+    return 0 if result.get("status") in ["success", "skipped", "dry_run"] else 1
+
+
+if __name__ == "__main__":
+    exit(main())

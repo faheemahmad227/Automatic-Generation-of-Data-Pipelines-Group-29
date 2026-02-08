@@ -1,0 +1,165 @@
+"""
+Test Suite for Sensor Data
+Generated: 2026-02-08 17:20:56
+"""
+
+import pytest
+import pandas as pd
+import json
+from pathlib import Path
+from datetime import datetime
+
+# Import the pipeline module
+from Sensor Data import Sensor DataPipeline
+
+
+class TestPipelineInitialization:
+    """Tests for pipeline initialization."""
+    
+    def test_pipeline_creates_successfully(self):
+        """Test that pipeline can be instantiated."""
+        pipeline = Sensor DataPipeline()
+        assert pipeline is not None
+    
+    def test_initial_metrics(self):
+        """Test that initial metrics are set correctly."""
+        pipeline = Sensor DataPipeline()
+        assert pipeline.metrics["records_input"] == 0
+        assert pipeline.metrics["records_output"] == 0
+
+
+class TestDataExtraction:
+    """Tests for data extraction functionality."""
+    
+    @pytest.fixture
+    def sample_csv(self, tmp_path):
+        """Create sample CSV file for testing."""
+        data = pd.DataFrame({
+            'id': [1, 2, 3, 4, 5],
+            'name': ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
+            'value': [100, 200, 300, 400, 500]
+        })
+        file_path = tmp_path / "sample.csv"
+        data.to_csv(file_path, index=False)
+        return file_path
+    
+    def test_extract_csv(self, sample_csv):
+        """Test CSV extraction."""
+        pipeline = Sensor DataPipeline()
+        df = pipeline.extract(str(sample_csv))
+        
+        assert len(df) == 5
+        assert 'id' in df.columns
+        assert 'name' in df.columns
+        assert 'value' in df.columns
+
+
+class TestDataTransformation:
+    """Tests for data transformation functionality."""
+    
+    def test_transform_handles_nulls(self):
+        """Test that transformation handles null values."""
+        pipeline = Sensor DataPipeline()
+        df = pd.DataFrame({
+            'id': [1, 2, None],
+            'value': [100, None, 300]
+        })
+        
+        result = pipeline.transform(df)
+        
+        # Should not have rows with all nulls
+        assert len(result) >= 1
+
+
+class TestPipelineExecution:
+    """Tests for complete pipeline execution."""
+    
+    @pytest.fixture
+    def pipeline_files(self, tmp_path):
+        """Create input/output paths for testing."""
+        data = pd.DataFrame({
+            'id': [1, 2, 3],
+            'value': [100, 200, 300]
+        })
+        input_path = tmp_path / "input.csv"
+        output_path = tmp_path / "output.csv"
+        data.to_csv(input_path, index=False)
+        return input_path, output_path
+    
+    def test_full_pipeline_execution(self, pipeline_files):
+        """Test complete pipeline run."""
+        input_path, output_path = pipeline_files
+        pipeline = Sensor DataPipeline()
+        
+        result = pipeline.run(str(input_path), str(output_path))
+        
+        assert result["status"] == "success"
+        assert output_path.exists()
+    
+    def test_dry_run_no_output(self, pipeline_files):
+        """Test that dry run doesn't create output."""
+        input_path, output_path = pipeline_files
+        pipeline = Sensor DataPipeline()
+        
+        result = pipeline.run(str(input_path), str(output_path), dry_run=True)
+        
+        assert result["status"] == "dry_run"
+
+
+class TestIdempotency:
+    """Tests for idempotent execution."""
+    
+    @pytest.fixture
+    def pipeline_with_data(self, tmp_path):
+        """Create pipeline with test data."""
+        data = pd.DataFrame({'id': [1, 2], 'value': [100, 200]})
+        input_path = tmp_path / "input.csv"
+        output_path = tmp_path / "output.csv"
+        data.to_csv(input_path, index=False)
+        
+        pipeline = Sensor DataPipeline()
+        pipeline.state_file = tmp_path / "state.json"
+        
+        return pipeline, input_path, output_path
+    
+    def test_skips_unchanged_data(self, pipeline_with_data):
+        """Test that unchanged data is skipped on second run."""
+        pipeline, input_path, output_path = pipeline_with_data
+        
+        # First run
+        result1 = pipeline.run(str(input_path), str(output_path))
+        assert result1["status"] == "success"
+        
+        # Second run with same data
+        result2 = pipeline.run(str(input_path), str(output_path))
+        assert result2["status"] == "skipped"
+    
+    def test_force_overrides_skip(self, pipeline_with_data):
+        """Test that force flag overrides skip."""
+        pipeline, input_path, output_path = pipeline_with_data
+        
+        # First run
+        pipeline.run(str(input_path), str(output_path))
+        
+        # Force second run
+        result = pipeline.run(str(input_path), str(output_path), force=True)
+        assert result["status"] == "success"
+
+
+class TestDataQuality:
+    """Tests for data quality checks."""
+    
+    def test_validation_detects_nulls(self):
+        """Test that validation detects null values."""
+        pipeline = Sensor DataPipeline()
+        df = pd.DataFrame({
+            'required_field': [1, None, 3]
+        })
+        
+        # Validation should work without errors
+        errors = pipeline.validate_input(df)
+        assert isinstance(errors, list)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--cov=Sensor Data", "--cov-report=html"])

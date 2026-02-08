@@ -1,0 +1,47 @@
+# Pipeline Configuration: Sensor Data
+# Generated: 2026-02-08 17:20:56
+
+pipeline:
+  name: "Sensor Data"
+  description: "Process the uploaded data with the following transformations: deduplicate, normalize, filter. Based on analysis, handle 1.25% null values and 1 duplicates."
+  version: "1.0.0"
+
+source:
+  type: "file"
+  format: "csv"
+  path: "input_data"
+
+destination:
+  type: "file"
+  format: "csv"
+  path: "output_data.csv"
+
+transformations:
+  - type: "validate"
+    description: "Handle missing values"
+    enabled: true
+  - type: "filter"
+    description: "Filter data based on conditions"
+    enabled: true
+  - type: "normalize"
+    description: "Normalize data values"
+    enabled: true
+  - type: "deduplicate"
+    description: "Remove duplicates"
+    enabled: true
+
+validation:
+
+error_handling:
+  on_failure: "retry"
+  max_retries: 3
+  notification: true
+
+execution:
+  schedule: "once"
+  timeout_seconds: 3600
+  enable_monitoring: true
+
+logging:
+  level: "INFO"
+  format: "json"

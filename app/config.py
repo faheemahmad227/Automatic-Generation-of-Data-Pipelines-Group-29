@@ -18,8 +18,8 @@ GENERATED_FOLDER.mkdir(exist_ok=True)
 TEMPLATES_FOLDER.mkdir(exist_ok=True)
 
 # AI Gateway Configuration (Uni Paderborn)
-AI_GATEWAY_URL = os.getenv("AI_GATEWAY_URL", "https://ai-gateway.2.2021.2.2.2.2.2.2")
-AI_GATEWAY_API_KEY = os.getenv("AI_GATEWAY_API_KEY", "")
+AI_GATEWAY_URL = os.getenv("AI_GATEWAY_URL", "https://ai-gateway.uni-paderborn.de/v1/")
+AI_GATEWAY_API_KEY = os.getenv("AI_GATEWAY_API_KEY", "sk-JajdqtLcvjAF7QPVavcRAw")
 
 # Alternative: OpenAI-compatible API
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")

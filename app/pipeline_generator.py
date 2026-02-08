@@ -21,13 +21,6 @@ class PipelineGenerator:
     """
     
     def __init__(self, templates_dir: str = None, output_dir: str = None):
-        """
-        Initialize the Pipeline Generator.
-        
-        Args:
-            templates_dir: Directory containing Jinja2 templates
-            output_dir: Directory for generated files
-        """
         self.templates_dir = Path(templates_dir) if templates_dir else Path(__file__).parent.parent / "templates_jinja"
         self.output_dir = Path(output_dir) if output_dir else Path(__file__).parent.parent / "generated_pipelines"
         
